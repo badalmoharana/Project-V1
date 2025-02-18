@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Search Engine</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        #search-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        #search-input {
+            width: 60%;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 24px;
+            margin-right: 10px;
+        }
+        #search-button {
+            padding: 12px 24px;
+            background: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+        }
+        #results-container {
+            display: flex;
+            gap: 20px;
+        }
+        #wikipedia-results {
+            flex: 2;
+            padding: 20px;
+        }
+        #youtube-results {
+            flex: 1;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .related-questions a {
+    color: #4285f4;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.related-questions a:hover {
+    text-decoration: underline;
+}
+        .video-item {
+            margin-bottom: 20px;
+        }
+        iframe {
+            width: 100%;
+            height: 200px;
+            border: none;
+            border-radius: 8px;
+        }
+        .toggle-details {
+            color: #4285f4;
+            cursor: pointer;
+            margin-top: 10px;
+            text-decoration: underline;
+        }
+        .detailed-explanation {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="search-container">
+        <input type="text" id="search-input" placeholder="Enter your search term...">
+        <button id="search-button">Search</button>
+    </div>
+    <div id="results-container">
+        <div id="wikipedia-results"></div>
+        <div id="youtube-results"></div>
+    </div>
+
+    <script>
+        document.getElementById('search-button').addEventListener('click', performSearch);
+        document.getElementById('search-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+
+        async function performSearch() {
+            const query = document.getElementById('search-input').value;
+            
+            try {
+                const wikiResponse = await fetch(`/api/wiki?query=${encodeURIComponent(query)}`);
+                const youtubeResponse = await fetch(`/api/youtube?query=${encodeURIComponent(query)}`);
+                
+                const wikiData = await wikiResponse.json();
+                const youtubeData = await youtubeResponse.json();
+
+                displayResults(wikiData, youtubeData);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function displayResults(wiki, youtube) {
+    console.log("Wikipedia Data:", wiki); // Log the Wikipedia data
+    console.log("YouTube Data:", youtube); // Log the YouTube data
+
+    // Handle undefined/null results
+    const safeWiki = wiki || {
+        title: "No Results Found",
+        briefSummary: "Could not retrieve information for this search",
+        detailedExplanation: "Please try another search term",
+        relatedQuestions: []
+    };
+
+    const wikiHtml = `
+        <h2>${safeWiki.title}</h2>
+        <p><strong>Brief Summary:</strong> ${safeWiki.briefSummary}</p>
+        ${safeWiki.detailedExplanation ? `
+            <div class="toggle-details" onclick="toggleDetails()">Show Detailed Explanation</div>
+            <div class="detailed-explanation">
+                <p><strong>Detailed Explanation:</strong> ${safeWiki.detailedExplanation}</p>
+            </div>
+        ` : ''}
+        <div class="related-questions">
+            <h3>Related Questions</h3>
+            <ul>
+                ${safeWiki.relatedQuestions.map(q => `
+                    <li>
+                        <a href="#" onclick="handleRelatedQuestionClick('${q}')">${q}</a>
+                    </li>
+                `).join('') || '<li>No related questions found</li>'}
+            </ul>
+        </div>
+    `;
+    document.getElementById('wikipedia-results').innerHTML = wikiHtml;
+
+    // Display YouTube results (unchanged)
+    const youtubeHtml = youtube.videos.map(video => `
+        <div class="video-item">
+            <iframe src="https://www.youtube.com/embed/${video.id}" 
+                    title="${video.title}" 
+                    allowfullscreen></iframe>
+            <p>${video.title}</p>
+        </div>
+    `).join('');
+    document.getElementById('youtube-results').innerHTML = youtubeHtml;
+}
+
+// Handle click on related questions
+function handleRelatedQuestionClick(question) {
+    // Populate the search input with the clicked question
+    document.getElementById('search-input').value = question;
+
+    // Trigger the search
+    performSearch();
+}
+
+        // Toggle detailed explanation visibility
+        function toggleDetails() {
+            const details = document.querySelector('.detailed-explanation');
+            const toggleButton = document.querySelector('.toggle-details');
+            if (details.style.display === 'none') {
+                details.style.display = 'block';
+                toggleButton.textContent = 'Hide Detailed Explanation';
+            } else {
+                details.style.display = 'none';
+                toggleButton.textContent = 'Show Detailed Explanation';
+            }
+        }
+    </script>
+</body>
+</html>
